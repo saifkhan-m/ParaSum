@@ -1,0 +1,11 @@
+*.json
+__pycache__/
+src/prepro/testfile.py
+temp/
+testdir/
+bert_data_paras/
+json_data_paras/
+merged_stories_tokenized/
+src/MODEL_PATH/
+.idea/
+src/MODEL_PATH/

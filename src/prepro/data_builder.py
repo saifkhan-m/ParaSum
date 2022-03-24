@@ -15,7 +15,7 @@ from multiprocess import Pool
 
 from others.logging import logger
 from others.tokenization import BertTokenizer
-from pytorch_transformers import XLNetTokenizer
+
 
 from others.utils import clean
 from prepro.utils import _get_word_ngrams
@@ -35,15 +35,15 @@ def load_json(p, lower):
     source = []
     tgt = []
     flag = False
-    for sent in json.load(open(p))['sentences']:
+    for sent in json.load(open(p,  encoding='utf8'))['sentences']:
         tokens = [t['word'] for t in sent['tokens']]
         if (lower):
             tokens = [t.lower() for t in tokens]
         if (tokens[0] == '@highlight'):
             flag = True
             tgt.append([])
-            continue
-        if (flag):
+
+        if flag:
             tgt[-1].extend(tokens)
         else:
             source.append(tokens)
@@ -53,6 +53,29 @@ def load_json(p, lower):
     return source, tgt
 
 
+def load_paras(file, lower):
+    source = []
+    tgt = []
+    flag = False
+    with open(file, encoding='utf8') as story_file:
+        paragraphs = story_file.read().split('\n\n')
+
+        for para in paragraphs:
+            tokens= para.split(' ')
+            if (lower):
+                tokens = [t.lower() for t in tokens]
+            if (para == '@highlight'):
+                flag = True
+                tgt.append([])
+
+            if flag:
+                tgt[-1].extend(tokens)
+            else:
+                source.append(tokens)
+
+    source = [clean(' '.join(sent)).split() for sent in source]
+    tgt = [clean(' '.join(sent)).split() for sent in tgt]
+    return source, tgt
 
 def load_xml(p):
     tree = ET.parse(p)
@@ -113,20 +136,28 @@ def tokenize(args):
 
     print("Preparing to tokenize %s to %s..." % (stories_dir, tokenized_stories_dir))
     stories = os.listdir(stories_dir)
+    #stories = stories[0:50]
     # make IO list file
     print("Making list of files to tokenize...")
-    with open("mapping_for_corenlp.txt", "w") as f:
-        for s in stories:
-            if (not s.endswith('story')):
-                continue
-            f.write("%s\n" % (os.path.join(stories_dir, s)))
-    command = ['java', 'edu.stanford.nlp.pipeline.StanfordCoreNLP', '-annotators', 'tokenize,ssplit',
+    f = open('mapping_for_corenlp.txt', 'w')
+    for s in stories:
+        if (not s.endswith('story')):
+            continue
+        f.write("%s\n" % (os.path.join(stories_dir, s)))
+    f.close()
+    # with open("mapping_for_corenlp.txt", "w") as f:
+    #     for s in stories:
+    #         if (not s.endswith('story')):
+    #             continue
+    #         f.write("%s\n" % (os.path.join(stories_dir, s)))
+    print('files done')
+    command = ['java', '-cp "C:/Users/khans/Documents/ber_hwr_hiwi/parasum/PreSumm/raw_data/stanford-corenlp-latest\stanford-corenlp-4.4.0/*"','edu.stanford.nlp.pipeline.StanfordCoreNLP', '-annotators', 'tokenize,ssplit',
                '-ssplit.newlineIsSentenceBreak', 'always', '-filelist', 'mapping_for_corenlp.txt', '-outputFormat',
                'json', '-outputDirectory', tokenized_stories_dir]
     print("Tokenizing %i files in %s and saving in %s..." % (len(stories), stories_dir, tokenized_stories_dir))
     subprocess.call(command)
     print("Stanford CoreNLP Tokenizer has finished.")
-    os.remove("mapping_for_corenlp.txt")
+    #os.remove("mapping_for_corenlp.txt")
 
     # Check that the tokenized stories directory contains the same number of files as the original directory
     num_orig = len(os.listdir(stories_dir))
@@ -280,7 +311,7 @@ def format_to_bert(args):
     for corpus_type in datasets:
         a_lst = []
         for json_f in glob.glob(pjoin(args.raw_path, '*' + corpus_type + '.*.json')):
-            real_name = json_f.split('/')[-1]
+            real_name = json_f.split('\\')[-1]
             a_lst.append((corpus_type, json_f, args, pjoin(args.save_path, real_name.replace('json', 'bert.pt'))))
         print(a_lst)
         pool = Pool(args.n_cpus)
@@ -321,8 +352,8 @@ def _format_to_bert(params):
                        "src_sent_labels": sent_labels, "segs": segments_ids, 'clss': cls_ids,
                        'src_txt': src_txt, "tgt_txt": tgt_txt}
         datasets.append(b_data_dict)
-    logger.info('Processed instances %d' % len(datasets))
-    logger.info('Saving to %s' % save_file)
+    print('Processed instances %d' % len(datasets))
+    print('Saving to %s' % save_file)
     torch.save(datasets, save_file)
     datasets = []
     gc.collect()
@@ -337,7 +368,7 @@ def format_to_lines(args):
         corpus_mapping[corpus_type] = {key.strip(): 1 for key in temp}
     train_files, valid_files, test_files = [], [], []
     for f in glob.glob(pjoin(args.raw_path, '*.json')):
-        real_name = f.split('/')[-1].split('.')[0]
+        real_name = f.split('\\')[-1].split('.')[0]
         if (real_name in corpus_mapping['valid']):
             valid_files.append(f)
         elif (real_name in corpus_mapping['test']):
@@ -357,7 +388,7 @@ def format_to_lines(args):
             dataset.append(d)
             if (len(dataset) > args.shard_size):
                 pt_file = "{:s}.{:s}.{:d}.json".format(args.save_path, corpus_type, p_ct)
-                with open(pt_file, 'w') as save:
+                with open(pt_file, 'w', encoding='utf8') as save:
                     # save.write('\n'.join(dataset))
                     save.write(json.dumps(dataset))
                     p_ct += 1
@@ -374,12 +405,63 @@ def format_to_lines(args):
                 dataset = []
 
 
+
+def format_to_paras(args):
+    corpus_mapping = {}
+    for corpus_type in ['valid', 'test', 'train']:
+        temp = []
+        for line in open(pjoin(args.map_path, 'mapping_' + corpus_type + '.txt')):
+            temp.append(hashhex(line.strip()))
+        corpus_mapping[corpus_type] = {key.strip(): 1 for key in temp}
+    train_files, valid_files, test_files = [], [], []
+    for f in glob.glob(pjoin(args.raw_path, '*.story')):
+        real_name = f.split('\\')[-1].split('.')[0]
+        if (real_name in corpus_mapping['valid']):
+            valid_files.append(f)
+        elif (real_name in corpus_mapping['test']):
+            test_files.append(f)
+        elif (real_name in corpus_mapping['train']):
+            train_files.append(f)
+        # else:
+        #     train_files.append(f)
+
+    corpora = {'train': train_files, 'valid': valid_files, 'test': test_files}
+    for corpus_type in ['train', 'valid', 'test']:
+        a_lst = [(f, args) for f in corpora[corpus_type]]
+        pool = Pool(args.n_cpus)
+        dataset = []
+        p_ct = 0
+        for d in pool.imap_unordered(_format_to_paras, a_lst):
+            dataset.append(d)
+            if (len(dataset) > args.shard_size):
+                pt_file = "{:s}.{:s}.{:d}.json".format(args.save_path, corpus_type, p_ct)
+                with open(pt_file, 'w', encoding='utf8') as save:
+                    # save.write('\n'.join(dataset))
+                    save.write(json.dumps(dataset))
+                    p_ct += 1
+                    dataset = []
+
+        pool.close()
+        pool.join()
+        if (len(dataset) > 0):
+            pt_file = "{:s}.{:s}.{:d}.json".format(args.save_path, corpus_type, p_ct)
+            with open(pt_file, 'w') as save:
+                # save.write('\n'.join(dataset))
+                save.write(json.dumps(dataset))
+                p_ct += 1
+                dataset = []
+
 def _format_to_lines(params):
     f, args = params
     print(f)
     source, tgt = load_json(f, args.lower)
     return {'src': source, 'tgt': tgt}
 
+def _format_to_paras(params):
+    f, args = params
+    print(f)
+    source, tgt = load_paras(f, args.lower)
+    return {'src': source, 'tgt': tgt}
 
 
 

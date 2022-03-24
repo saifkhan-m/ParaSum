@@ -119,7 +119,8 @@ class Translator(object):
             translations.append(translation)
 
         return translations
-
+    #https://github.com/stanfordnlp/stanfordnlp/issues/6
+    #https://joeynmt.readthedocs.io/en/latest/_modules/joeynmt/search.html
     def translate(self,
                   data_iter, step,
                   attn_debug=False):
@@ -326,6 +327,7 @@ class Translator(object):
                     + beam_offset[:topk_beam_index.size(0)].unsqueeze(1))
             select_indices = batch_index.view(-1)
 
+            #select_indices = select_indices.type(torch.int64)
             # Append last prediction.
             alive_seq = torch.cat(
                 [alive_seq.index_select(0, select_indices),
