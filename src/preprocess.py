@@ -5,7 +5,7 @@ import argparse
 import time
 
 from others.logging import init_logger
-from prepro import data_builder, testfile
+from prepro import data_builder
 
 
 def do_format_to_lines(args):
@@ -30,10 +30,7 @@ def do_format_xsum_to_lines(args):
     data_builder.format_xsum_to_lines(args)
     print(time.clock())
 
-def do_tokenize(args):
-    print(time.clock())
-    testfile.tokenize(args)
-    print(time.clock())
+
 
 
 def str2bool(v):

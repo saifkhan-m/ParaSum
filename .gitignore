@@ -3,8 +3,8 @@ __pycache__/
 src/prepro/testfile.py
 temp/
 testdir/
-bert_data_paras/
-json_data_paras/
+*.story
+*.pt
 merged_stories_tokenized/
 src/MODEL_PATH/
 .idea/
