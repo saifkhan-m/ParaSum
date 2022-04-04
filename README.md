@@ -1,6 +1,6 @@
 # ParaSum
 
-**This code is adapted from EMNLP 2019 paper [Text Summarization with Pretrained Encoders](https://arxiv.org/abs/1908.08345)** using [this](https://github.com/nlpyang/PreSumm) github repo. Please refer their repo for more details about their work.
+**This code is adapted from EMNLP 2019 paper [Text Summarization with Pretrained Encoders](https://arxiv.org/abs/1908.08345)** using [this](https://github.com/nlpyang/PreSumm) Github repo. Please refer to their repo for more details about their work.
 
 
 
@@ -10,7 +10,7 @@
 
 
 
-**Updates**: For encoding a text longer than 512 tokens, for example 800. Set max_pos to 800 during both preprocessing and training.
+**Updates**: For encoding a text longer than 512 tokens, for example, 800. Set max_pos to 800 during both preprocessing and training.
 
 
 Some codes are borrowed from ONMT(https://github.com/OpenNMT/OpenNMT-py)
@@ -28,14 +28,26 @@ Some codes are borrowed from ONMT(https://github.com/OpenNMT/OpenNMT-py)
 
 [CNN/DM and XSum](https://drive.google.com/file/d/1kYA384UEAQkvmZ-yWZAfxw7htCbCwFzC) 
 
+## Important files
+- [`src/preprocess.py`](https://github.com/saifkhan-m/ParaSum/blob/master/src/preprocess.py "`src\preprocess.py`")- This file takes in the arguments, parses them, and then start the preprocessing steps mentioned below.
+- [`src/train.py`](https://github.com/saifkhan-m/ParaSum/blob/master/src/train.py "`src/train.py`")- file to start the training of the model using preprocessed data.
+- [`src/train_abstractive.py`](https://github.com/saifkhan-m/ParaSum/blob/master/src/train_abstractive.py)- code to train an abstractive model. The file is called from the `src/train.py`.
+- [`/src/train_extractive.py`](https://github.com/saifkhan-m/ParaSum/blob/master/src/train_extractive.py)- code to train an extractive model. The file is called from the `src/train.py`.
+- [`src/models/loss.py`](https://github.com/saifkhan-m/ParaSum/blob/master/src/models/loss.py)- contains the information about the loss functions during training and prediction. Different loss functions for training and prediction.
+- [`src/models/trainer.py`](https://github.com/saifkhan-m/ParaSum/blob/master/src/models/trainer.py)-  The training schedule is built in this file. Can change hyperparameters and training routine in this file.
+- [`src/models/model_builder.py`](https://github.com/saifkhan-m/ParaSum/blob/master/src/models/model_builder.py)-  Check this file to get architectural information for different models. The models are designed in this file for both extractive and abstractive setups.
+- [`src/prepro/data_builder.py`](https://github.com/saifkhan-m/ParaSum/blob/master/src/prepro/data_builder.py)- Main file for all the data preprocessing from tokenisation to generating training, testa and evaluation files.
+- [`src/models/predictor.py`](https://github.com/saifkhan-m/ParaSum/blob/master/src/models/predictor.py)- file to predict a summary of an article. Load the model and uses Beam search to create a summary.
+
+
 ## Data Preparation For CNN/Dailymail
 
 
 #### Step 1 Download Stories
 Download and unzip the `stories` directories from [here](http://cs.nyu.edu/~kcho/DMQA/) for both CNN and Daily Mail. Put all  `.story` files in one directory (e.g. `../raw_stories`)
 
-####  Step 2. Format to Simpler Json Files
- The paragraphs are split based on a delimiter. Currently `\n\n` is used as the delimiter to split the paragraphs present in the `.story` file. The delimiter can be changed in [this](https://github.com/saifkhan-m/ParaSum/blob/dd9552ad23382d7ffcfddfd03cad9bf39afb0c72/src/prepro/data_builder.py#L61) line of code.
+####  Step 2. Format to Simpler JSON Files
+ The paragraphs are split based on a delimiter. Currently, `\n\n` is used as the delimiter to split the paragraphs present in the `.story` file. The delimiter can be changed in [this](https://github.com/saifkhan-m/ParaSum/blob/dd9552ad23382d7ffcfddfd03cad9bf39afb0c72/src/prepro/data_builder.py#L61) line of code.
 ```
 python preprocess.py -mode format_to_paras -raw_path RAW_PATH -save_path JSON_PATH -n_cpus 1 -use_bert_basic_tokenizer false -map_path MAP_PATH
 ```
@@ -89,4 +101,4 @@ python train.py  -task abs -mode train -bert_data_path BERT_DATA_PATH -dec_dropo
 ```
 * `-mode` can be {`validate, test`}, where `validate` will inspect the model directory and evaluate the model for each newly saved checkpoint, `test` need to be used with `-test_from`, indicating the checkpoint you want to use
 * `MODEL_PATH` is the directory of saved checkpoints
-* use `-mode valiadte` with `-test_all`, the system will load all saved checkpoints and select the top ones to generate summaries (this will take a while)
+* use `-mode validate with `-test_all`, the system will load all saved checkpoints and select the top ones to generate summaries (this will take a while)
